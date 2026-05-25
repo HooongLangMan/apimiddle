@@ -16,9 +16,10 @@ export type PricingGroupOption = {
 
 const fallbackGroupRatios: Record<string, number> = {
   'claude 0.45x': 0.45,
-  'claude 0.6x': 0.6,
   'claude 0.85x': 0.85,
   'gpt 0.3x': 0.3,
+  'gemini 0.4x': 0.4,
+  'gemini 0.55x': 0.55,
 }
 
 const hiddenGroupIds = new Set(['default', 'vip', 'svip'])
@@ -36,7 +37,7 @@ function inferPricingGroupFamily(groupName: string): PricingGroupFamily {
   const lower = groupName.toLowerCase()
   if (lower.includes('claude')) return 'Claude'
   if (lower.includes('gpt')) return 'GPT'
-  if (lower.includes('gemini')) return 'Gemini'
+  if (lower.includes('gemini') || lower.includes('gimini')) return 'Gemini'
   return 'Other'
 }
 
@@ -68,7 +69,10 @@ function getGroupSortPriority(group: PricingGroupOption) {
 }
 
 export function normalizePricingGroupId(groupName: string) {
-  const normalized = String(groupName || '').trim().toLowerCase()
+  const normalized = String(groupName || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^gimini\b/, 'gemini')
   if (normalized === 'claude 0.8x') return 'claude 0.85x'
   return normalized
 }
@@ -88,6 +92,7 @@ export function formatPricingGroupName(groupName: string) {
   return raw
     .replace(/^claude\b/i, 'Claude')
     .replace(/^gpt\b/i, 'GPT')
+    .replace(/^gimini\b/i, 'Gemini')
     .replace(/^gemini\b/i, 'Gemini')
 }
 
@@ -175,6 +180,7 @@ export function derivePricingGroupOptions(pricing?: PricingSummary | null): Pric
         modelNames,
       }
     })
+    .filter((group) => group.modelCount > 0)
     .sort((left, right) => {
       const familyDiff = getGroupSortPriority(left) - getGroupSortPriority(right)
       if (familyDiff !== 0) return familyDiff

@@ -17,7 +17,7 @@ import { ContactModal } from './ContactModal'
 const navItems = [
   { to: '/console', label: '概览', icon: Gauge },
   { to: '/console/keys', label: 'API Keys', icon: KeyRound },
-  { to: '/console/models', label: '可用模型', icon: Layers3 },
+  { to: '/console/models', label: '模型广场', icon: Layers3 },
   { to: '/console/usage', label: '使用记录', icon: ReceiptText },
   { to: '/console/docs', label: '接入文档', icon: BookOpen },
   { to: '/console/announcements', label: '公告', icon: Bell },

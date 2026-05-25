@@ -322,8 +322,8 @@ export function DashboardPage() {
               <div className="quick-link-content">
                 <Layers3 size={16} />
                 <div>
-                  <strong>查看可用模型</strong>
-                  <span>看基础价格、协议和倍率组</span>
+                  <strong>进入模型广场</strong>
+                  <span>看实时模型、Gemini 新系列和各分组价格</span>
                 </div>
               </div>
               <ExternalLink size={14} />
