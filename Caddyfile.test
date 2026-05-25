@@ -1,0 +1,15 @@
+:80 {
+	encode gzip zstd
+
+	request_body {
+		max_size {$MAX_REQUEST_BODY_MB}MB
+	}
+
+	header {
+		-X-Powered-By
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+
+	reverse_proxy new-api:3000
+}

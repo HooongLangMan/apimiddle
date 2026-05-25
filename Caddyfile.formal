@@ -1,0 +1,60 @@
+{
+	email {$LETSENCRYPT_EMAIL}
+}
+
+# Public homepage and user portal under the main domain.
+{$DOMAIN} {
+	encode gzip zstd
+
+	request_body {
+		max_size {$MAX_REQUEST_BODY_MB}MB
+	}
+
+	header {
+		-X-Powered-By
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+
+	@api path /v1* /api/status* /api/user/* /api/token/* /api/log/* /api/pricing*
+	reverse_proxy @api 127.0.0.1:3000
+
+	reverse_proxy 127.0.0.1:3004
+}
+
+# Dedicated client API domain.
+{$API_DOMAIN} {
+	encode gzip zstd
+
+	request_body {
+		max_size {$MAX_REQUEST_BODY_MB}MB
+	}
+
+	header {
+		-X-Powered-By
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+
+	reverse_proxy 127.0.0.1:3000
+}
+
+# Backend/admin panel only.
+admin.token688.cn {
+	encode gzip zstd
+
+	request_body {
+		max_size {$MAX_REQUEST_BODY_MB}MB
+	}
+
+	header {
+		-X-Powered-By
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+
+	reverse_proxy 127.0.0.1:3000
+}

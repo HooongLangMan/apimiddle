@@ -1,0 +1,17 @@
+services:
+  portal:
+    image: node:20-alpine
+    container_name: new-api-portal
+    restart: unless-stopped
+    network_mode: host
+    working_dir: /app
+    environment:
+      PORTAL_API_PORT: 3004
+      PORTAL_API_BASE: /portal-api
+      PORTAL_SERVE_STATIC: "true"
+      UPSTREAM_BASE_URL: http://127.0.0.1:3000
+      PORTAL_SESSION_SECRET: ${PORTAL_SESSION_SECRET}
+    volumes:
+      - ./app/dist:/app/dist:ro
+      - ./app/server-dist:/app/server-dist:ro
+    command: ["node", "server-dist/index.cjs"]

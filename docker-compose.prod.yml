@@ -1,0 +1,13 @@
+services:
+  new-api:
+    network_mode: host
+    ports: []
+    expose: []
+    networks: []
+
+  caddy:
+    network_mode: host
+    ports: []
+    networks: []
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro

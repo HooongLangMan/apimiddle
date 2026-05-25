@@ -1,0 +1,6 @@
+services:
+  caddy:
+    ports:
+      - "18080:80"
+    volumes:
+      - ./Caddyfile.test:/etc/caddy/Caddyfile:ro

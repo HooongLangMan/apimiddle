@@ -1,0 +1,21 @@
+:80 {
+	encode gzip zstd
+
+	# Keep body size bounded before requests reach the gateway.
+	request_body {
+		max_size 32MB
+	}
+
+	# Basic hardening for a small private deployment.
+	header {
+		-X-Powered-By
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+
+	reverse_proxy new-api:3000 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up X-Real-IP {remote_host}
+	}
+}

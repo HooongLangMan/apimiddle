@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.starmodel.ai)",
+      "WebFetch(domain:gohok.top)",
+      "Bash(curl -X POST https://token688.cn/api/user/register -H \"Content-Type: application/json\" -d '{\"username\":\"test_user\",\"password\":\"test123456\",\"email\":\"test@example.com\"}' -v)",
+      "Bash(npm install *)",
+      "Bash(curl *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

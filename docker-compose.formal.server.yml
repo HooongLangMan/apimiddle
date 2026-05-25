@@ -1,0 +1,110 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: new-api-postgres
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - postgres
+      - -c
+      - listen_addresses=127.0.0.1
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ}
+    volumes:
+      - ./storage/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: new-api-redis
+    restart: unless-stopped
+    network_mode: host
+    command: ["redis-server", "--bind", "127.0.0.1", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - ./storage/redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -h 127.0.0.1 -p ${REDIS_PORT} -a ${REDIS_PASSWORD} ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  new-api:
+    image: calciumion/new-api:latest
+    container_name: new-api
+    restart: unless-stopped
+    network_mode: host
+    command: --log-dir /app/logs
+    env_file:
+      - .env.formal
+    environment:
+      TZ: ${TZ}
+      PORT: ${NEW_API_PORT}
+      SESSION_SECRET: ${SESSION_SECRET}
+      CRYPTO_SECRET: ${CRYPTO_SECRET}
+      STREAMING_TIMEOUT: ${STREAMING_TIMEOUT}
+      MAX_REQUEST_BODY_MB: ${MAX_REQUEST_BODY_MB}
+      ERROR_LOG_ENABLED: ${ERROR_LOG_ENABLED}
+      GENERATE_DEFAULT_TOKEN: ${GENERATE_DEFAULT_TOKEN}
+      SQL_DSN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_PORT}/${POSTGRES_DB}
+      REDIS_CONN_STRING: redis://:${REDIS_PASSWORD}@127.0.0.1:${REDIS_PORT}/0
+      NODE_NAME: new-api-node-1
+    volumes:
+      - ./storage/new-api:/data
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:${NEW_API_PORT}/api/status | grep -o '\"success\":\\s*true' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  caddy:
+    image: caddy:2
+    container_name: new-api-caddy
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      new-api:
+        condition: service_healthy
+    env_file:
+      - .env.formal
+    volumes:
+      - ./Caddyfile.formal:/etc/caddy/Caddyfile:ro
+      - ./storage/caddy:/data
+      - ./storage/caddy-config:/config
+
+  postgres-backup:
+    image: postgres:16
+    container_name: new-api-postgres-backup
+    restart: "no"
+    env_file:
+      - .env.formal
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint:
+      - /bin/sh
+      - -lc
+      - |
+        set -eu
+        mkdir -p /backups
+        ts=$$(date +%Y%m%d-%H%M%S)
+        pg_dump -h postgres -U ${POSTGRES_USER} -d ${POSTGRES_DB} > /backups/new-api-$$ts.sql
+        find /backups -type f -mtime +${BACKUP_RETENTION_DAYS} -delete
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - tools
