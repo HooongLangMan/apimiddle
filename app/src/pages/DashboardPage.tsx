@@ -23,7 +23,6 @@ type DashboardResponse = DashboardSummary & {
 type DailyTrendItem = {
   label: string
   calls: number
-  cost: number
   tokens: number
 }
 
@@ -32,10 +31,20 @@ type HoveredTrendPoint = DailyTrendItem & {
   y: number
 }
 
+const DASHBOARD_LOG_PAGE_SIZE = 100
+const DASHBOARD_LOG_MAX_PAGES = 5
+
 function formatCompactNumber(value: number) {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
   return `${value}`
+}
+
+function getLocalDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function buildLinePath(values: number[], width: number, height: number, offsetX = 0, offsetY = 0) {
@@ -60,12 +69,51 @@ export function DashboardPage() {
   const [hoveredPoint, setHoveredPoint] = useState<HoveredTrendPoint | null>(null)
 
   useEffect(() => {
-    Promise.all([getDashboardRequest(), getUsageRequest()])
-      .then(([dashboard, usageResponse]) => {
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const dashboardPromise = getDashboardRequest()
+        const firstUsagePage = await getUsageRequest({
+          page: 1,
+          pageSize: DASHBOARD_LOG_PAGE_SIZE,
+          window: '7d',
+        })
+
+        const pageCount = Math.min(
+          DASHBOARD_LOG_MAX_PAGES,
+          Math.max(1, Math.ceil(firstUsagePage.total / firstUsagePage.pageSize)),
+        )
+
+        let usageItems = [...firstUsagePage.items]
+
+        if (pageCount > 1) {
+          const restPages = await Promise.all(
+            Array.from({ length: pageCount - 1 }, (_, index) =>
+              getUsageRequest({
+                page: index + 2,
+                pageSize: DASHBOARD_LOG_PAGE_SIZE,
+                window: '7d',
+              }),
+            ),
+          )
+          usageItems = usageItems.concat(restPages.flatMap((page) => page.items))
+        }
+
+        const dashboard = await dashboardPromise
+        if (cancelled) return
+
         setData(dashboard)
-        setUsage(usageResponse.items)
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : '获取概览数据失败'))
+        setUsage(usageItems)
+      } catch (err) {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : '获取概览数据失败')
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const activeKeyCount = useMemo(() => data?.activeKeyCount ?? data?.keyCount ?? 0, [data])
@@ -88,12 +136,12 @@ export function DashboardPage() {
   }, [successCount, usage])
 
   const todaySummary = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalDateKey(new Date())
     return usage.reduce(
       (acc, item) => {
         const parsed = new Date(item.time.replace(/-/g, '/'))
         if (Number.isNaN(parsed.getTime())) return acc
-        if (parsed.toISOString().slice(0, 10) !== today) return acc
+        if (getLocalDateKey(parsed) !== today) return acc
         acc.calls += 1
         acc.cost += item.costUsd
         acc.tokens += item.tokens
@@ -110,11 +158,10 @@ export function DashboardPage() {
     for (let offset = 6; offset >= 0; offset -= 1) {
       const date = new Date(now)
       date.setDate(now.getDate() - offset)
-      const key = date.toISOString().slice(0, 10)
+      const key = getLocalDateKey(date)
       bucket.set(key, {
         label: `${date.getMonth() + 1}/${date.getDate()}`,
         calls: 0,
-        cost: 0,
         tokens: 0,
       })
     }
@@ -122,11 +169,10 @@ export function DashboardPage() {
     for (const item of usage) {
       const parsed = new Date(item.time.replace(/-/g, '/'))
       if (Number.isNaN(parsed.getTime())) continue
-      const key = parsed.toISOString().slice(0, 10)
+      const key = getLocalDateKey(parsed)
       const current = bucket.get(key)
       if (!current) continue
       current.calls += 1
-      current.cost += item.costUsd
       current.tokens += item.tokens
     }
 
@@ -138,10 +184,6 @@ export function DashboardPage() {
     [trend],
   )
 
-  const costPath = useMemo(
-    () => buildLinePath(trend.map((item) => item.cost), 640, 160, 30, 20),
-    [trend],
-  )
 
   const usageRate = useMemo(() => {
     if (!data) return 0
@@ -176,7 +218,7 @@ export function DashboardPage() {
           </div>
           <div className="mini-chart">
             <svg viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
-              <path className="mini-chart-path mini-chart-balance" d={costPath} />
+              <path className="mini-chart-path mini-chart-balance" d={callPath} />
             </svg>
           </div>
         </article>
@@ -191,7 +233,7 @@ export function DashboardPage() {
           </div>
           <div className="mini-chart">
             <svg viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
-              <path className="mini-chart-path mini-chart-cost" d={costPath} />
+              <path className="mini-chart-path mini-chart-cost" d={callPath} />
             </svg>
           </div>
         </article>
@@ -354,13 +396,11 @@ export function DashboardPage() {
         <div className="dashboard-line-chart">
           <div className="dashboard-line-legend">
             <span><i className="line-dot line-dot-blue" /> 请求次数</span>
-            <span><i className="line-dot line-dot-green" /> 消耗金额</span>
           </div>
           {hoveredPoint ? (
             <div className="dashboard-line-tooltip">
               <strong>{hoveredPoint.label}</strong>
               <span>请求 {hoveredPoint.calls} 次</span>
-              <span>消耗 ${hoveredPoint.cost.toFixed(4)}</span>
               <span>{formatCompactNumber(hoveredPoint.tokens)} tokens</span>
             </div>
           ) : null}
@@ -376,14 +416,11 @@ export function DashboardPage() {
               />
             ))}
             <path d={callPath} className="dashboard-line-series line-series-blue" />
-            <path d={costPath} className="dashboard-line-series line-series-green" />
             {trend.map((item, index) => {
               const step = trend.length > 1 ? 640 / (trend.length - 1) : 640
               const x = 30 + step * index
               const maxCalls = Math.max(...trend.map((entry) => entry.calls), 1)
-              const maxCost = Math.max(...trend.map((entry) => entry.cost), 1)
               const callsY = 20 + 160 - (item.calls / maxCalls) * 160
-              const costY = 20 + 160 - (item.cost / maxCost) * 160
               return (
                 <g key={item.label}>
                   <rect
@@ -392,7 +429,7 @@ export function DashboardPage() {
                     width={36}
                     height={182}
                     className="dashboard-line-column-hitbox"
-                    onMouseEnter={() => setHoveredPoint({ ...item, x, y: Math.min(callsY, costY) })}
+                    onMouseEnter={() => setHoveredPoint({ ...item, x, y: callsY })}
                     onMouseLeave={() => setHoveredPoint(null)}
                   />
                   <circle
@@ -403,16 +440,7 @@ export function DashboardPage() {
                     onMouseEnter={() => setHoveredPoint({ ...item, x, y: callsY })}
                     onMouseLeave={() => setHoveredPoint(null)}
                   />
-                  <circle
-                    cx={x}
-                    cy={costY}
-                    r="5"
-                    className="dashboard-line-hitbox"
-                    onMouseEnter={() => setHoveredPoint({ ...item, x, y: costY })}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                  />
                   <circle cx={x} cy={callsY} r="3.5" className="dashboard-line-point line-point-blue" />
-                  <circle cx={x} cy={costY} r="3.5" className="dashboard-line-point line-point-green" />
                   <text x={x} y="210" textAnchor="middle" className="dashboard-line-label">
                     {item.label}
                   </text>
