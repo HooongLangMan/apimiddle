@@ -61,9 +61,9 @@ export function DashboardPage() {
 
   useEffect(() => {
     Promise.all([getDashboardRequest(), getUsageRequest()])
-      .then(([dashboard, usageItems]) => {
+      .then(([dashboard, usageResponse]) => {
         setData(dashboard)
-        setUsage(usageItems)
+        setUsage(usageResponse.items)
       })
       .catch((err) => setError(err instanceof Error ? err.message : '获取概览数据失败'))
   }, [])

@@ -7,8 +7,6 @@ import {
   announcements,
   billing,
   dashboard,
-  keys as fallbackKeys,
-  usage as fallbackUsage,
 } from './data'
 
 const app = express()
@@ -48,6 +46,15 @@ type UpstreamKeyRecord = {
   used_quota?: number
   unlimited_quota?: boolean
   expired_time?: number
+}
+
+class HttpError extends Error {
+  statusCode: number
+
+  constructor(statusCode: number, message: string) {
+    super(message)
+    this.statusCode = statusCode
+  }
 }
 
 declare module 'express-session' {
@@ -124,7 +131,7 @@ async function upstreamLogin(username: string, password: string) {
 
 function requireSession(req: express.Request) {
   if (!req.session.upstream) {
-    throw new Error('当前未登录')
+    throw new HttpError(401, 'Please log in again')
   }
 
   return {
@@ -142,6 +149,16 @@ function formatTime(timestamp: unknown) {
 function listItems<T>(response: UpstreamListResponse<T>) {
   if (Array.isArray(response.data)) return response.data
   return response.data?.items ?? []
+}
+
+function getErrorStatus(error: unknown, fallback = 502) {
+  if (error instanceof HttpError) return error.statusCode
+  return fallback
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message
+  return fallback
 }
 
 const router = express.Router()
@@ -289,7 +306,7 @@ router.get('/dashboard', (req, res) => {
       const availableModels = (modelsData.data ?? []).slice(0, 8).map((item: string) => ({
         id: item,
         label: item,
-        description: '当前账号可访问的模型',
+        description: 'Models available to this account',
         status: 'available' as const,
       }))
       const keyItems = listItems<UpstreamKeyRecord>(keysData)
@@ -304,10 +321,8 @@ router.get('/dashboard', (req, res) => {
         source: 'upstream',
       })
     } catch (error) {
-      res.status(502).json({
-        ...dashboard,
-        source: 'fallback',
-        message: error instanceof Error ? error.message : '获取概览数据失败',
+      res.status(getErrorStatus(error)).json({
+        message: getErrorMessage(error, 'Failed to load dashboard'),
       })
     }
   })()
@@ -335,8 +350,10 @@ router.get('/keys', (req, res) => {
       }))
 
       res.json(items)
-    } catch {
-      res.status(502).json(fallbackKeys)
+    } catch (error) {
+      res.status(getErrorStatus(error)).json({
+        message: getErrorMessage(error, 'Failed to load API keys'),
+      })
     }
   })()
 })
@@ -509,54 +526,114 @@ router.delete('/keys/:id', (req, res) => {
 router.get('/usage', (req, res) => {
   ;(async () => {
     try {
-      const data = await upstreamFetch(
-        '/api/log/self/?p=0&type=0&start_timestamp=0&end_timestamp=0&model_name=&token_name=',
-        {
-          headers: requireSession(req),
-        },
+      const page = Math.max(1, Number.parseInt(String(req.query.page ?? '1'), 10) || 1)
+      const pageSize = Math.min(
+        100,
+        Math.max(10, Number.parseInt(String(req.query.page_size ?? '20'), 10) || 20),
       )
+      const model = String(req.query.model ?? '').trim()
+      const token = String(req.query.token ?? '').trim()
+      const group = String(req.query.group ?? '').trim()
+      const status = String(req.query.status ?? '').trim()
+      const keyword = String(req.query.search ?? '').trim()
+      const window = String(req.query.window ?? 'all').trim()
 
-      const items = listItems<Record<string, unknown>>(data).slice(0, 50).map((item) => ({
-        other: (() => {
-          try {
-            return JSON.parse(String(item.other ?? '{}'))
-          } catch {
-            return {}
-          }
-        })(),
-        id: String(item.id),
-        time: formatTime(item.created_at),
-        model: String(item.model_name ?? ''),
-        costUsd: Number(item.quota ?? 0) / 500000,
-        tokens: Number(item.prompt_tokens ?? 0) + Number(item.completion_tokens ?? 0),
-        status: Number(item.type) === 5 ? 'failed' : 'success',
-        promptTokens: Number(item.prompt_tokens ?? 0),
-        completionTokens: Number(item.completion_tokens ?? 0),
-        tokenName: String(item.token_name ?? ''),
-        group: String(item.group ?? ''),
-        requestId: String(item.request_id ?? ''),
-        upstreamRequestId: String(item.upstream_request_id ?? ''),
-        requestPath: '',
-        useTimeSeconds: Number(item.use_time ?? 0),
-        isStream: Boolean(item.is_stream),
-        cacheTokens: 0,
-        cacheCreationTokens: 0,
-        cacheWriteTokens: 0,
-        cacheRatio: 0,
-        cacheCreationRatio: 0,
-      })).map((entry) => ({
-        ...entry,
-        requestPath: String((entry as { other: Record<string, unknown> }).other.request_path ?? ''),
-        cacheTokens: Number((entry as { other: Record<string, unknown> }).other.cache_tokens ?? 0),
-        cacheCreationTokens: Number((entry as { other: Record<string, unknown> }).other.cache_creation_tokens ?? 0),
-        cacheWriteTokens: Number((entry as { other: Record<string, unknown> }).other.cache_write_tokens ?? 0),
-        cacheRatio: Number((entry as { other: Record<string, unknown> }).other.cache_ratio ?? 0),
-        cacheCreationRatio: Number((entry as { other: Record<string, unknown> }).other.cache_creation_ratio ?? 0),
-      })).map(({ other, ...rest }) => rest)
+      const now = Date.now()
+      let startTimestamp = 0
+      if (window === '24h') {
+        startTimestamp = Math.floor((now - 24 * 60 * 60 * 1000) / 1000)
+      } else if (window === '7d') {
+        startTimestamp = Math.floor((now - 7 * 24 * 60 * 60 * 1000) / 1000)
+      }
 
-      res.json(items)
-    } catch {
-      res.status(502).json(fallbackUsage)
+      const params = new URLSearchParams({
+        p: String(page),
+        page_size: String(pageSize),
+        type: status === 'failed' ? '5' : '0',
+        start_timestamp: String(startTimestamp),
+        end_timestamp: '0',
+        model_name: model,
+        token_name: token,
+      })
+
+      if (group) params.set('group', group)
+
+      const data = await upstreamFetch(`/api/log/self/?${params.toString()}`, {
+        headers: requireSession(req),
+      })
+
+      let items = listItems<Record<string, unknown>>(data)
+        .map((item) => ({
+          other: (() => {
+            try {
+              return JSON.parse(String(item.other ?? '{}'))
+            } catch {
+              return {}
+            }
+          })(),
+          id: String(item.id),
+          time: formatTime(item.created_at),
+          model: String(item.model_name ?? ''),
+          costUsd: Number(item.quota ?? 0) / 500000,
+          tokens: Number(item.prompt_tokens ?? 0) + Number(item.completion_tokens ?? 0),
+          status: Number(item.type) === 5 ? 'failed' : 'success',
+          promptTokens: Number(item.prompt_tokens ?? 0),
+          completionTokens: Number(item.completion_tokens ?? 0),
+          tokenName: String(item.token_name ?? ''),
+          group: String(item.group ?? ''),
+          requestId: String(item.request_id ?? ''),
+          upstreamRequestId: String(item.upstream_request_id ?? ''),
+          requestPath: '',
+          useTimeSeconds: Number(item.use_time ?? 0),
+          isStream: Boolean(item.is_stream),
+          cacheTokens: 0,
+          cacheCreationTokens: 0,
+          cacheWriteTokens: 0,
+          cacheRatio: 0,
+          cacheCreationRatio: 0,
+        }))
+        .map((entry) => ({
+          ...entry,
+          requestPath: String((entry as { other: Record<string, unknown> }).other.request_path ?? ''),
+          cacheTokens: Number((entry as { other: Record<string, unknown> }).other.cache_tokens ?? 0),
+          cacheCreationTokens: Number((entry as { other: Record<string, unknown> }).other.cache_creation_tokens ?? 0),
+          cacheWriteTokens: Number((entry as { other: Record<string, unknown> }).other.cache_write_tokens ?? 0),
+          cacheRatio: Number((entry as { other: Record<string, unknown> }).other.cache_ratio ?? 0),
+          cacheCreationRatio: Number((entry as { other: Record<string, unknown> }).other.cache_creation_ratio ?? 0),
+        }))
+        .map(({ other, ...rest }) => rest)
+
+      if (keyword) {
+        const lowered = keyword.toLowerCase()
+        items = items.filter((item) =>
+          [
+            item.model,
+            item.tokenName,
+            item.group,
+            item.requestId,
+            item.upstreamRequestId,
+            item.requestPath,
+          ]
+            .join(' ')
+            .toLowerCase()
+            .includes(lowered),
+        )
+      }
+
+      res.json({
+        items,
+        total: Number(data.data?.total ?? items.length),
+        page,
+        pageSize,
+      })
+    } catch (error) {
+      res.status(getErrorStatus(error)).json({
+        message: getErrorMessage(error, 'Failed to load usage logs'),
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+      })
     }
   })()
 })
@@ -583,10 +660,8 @@ router.get('/billing', (req, res) => {
         source: 'upstream',
       })
     } catch (error) {
-      res.status(502).json({
-        ...billing,
-        source: 'fallback',
-        message: error instanceof Error ? error.message : '获取余额失败',
+      res.status(getErrorStatus(error)).json({
+        message: getErrorMessage(error, 'Failed to load billing data'),
       })
     }
   })()

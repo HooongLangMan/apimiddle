@@ -5,7 +5,7 @@ import type {
   BillingSummary,
   DashboardSummary,
   PricingSummary,
-  UsageItem,
+  UsageListResponse,
 } from './types'
 import { buildPortalApiUrl } from './config'
 
@@ -124,8 +124,28 @@ export async function getKeyValueRequest(id: string) {
   return request<{ key: string }>(`/keys/${id}/value`, { method: 'POST' })
 }
 
-export async function getUsageRequest() {
-  return request<UsageItem[]>('/usage')
+export async function getUsageRequest(params?: {
+  page?: number
+  pageSize?: number
+  model?: string
+  token?: string
+  group?: string
+  status?: 'all' | 'success' | 'failed'
+  search?: string
+  window?: 'all' | '24h' | '7d'
+}) {
+  const search = new URLSearchParams()
+  if (params?.page) search.set('page', String(params.page))
+  if (params?.pageSize) search.set('page_size', String(params.pageSize))
+  if (params?.model && params.model !== 'all') search.set('model', params.model)
+  if (params?.token && params.token !== 'all') search.set('token', params.token)
+  if (params?.group && params.group !== 'all') search.set('group', params.group)
+  if (params?.status && params.status !== 'all') search.set('status', params.status)
+  if (params?.search?.trim()) search.set('search', params.search.trim())
+  if (params?.window && params.window !== 'all') search.set('window', params.window)
+
+  const suffix = search.toString() ? `?${search.toString()}` : ''
+  return request<UsageListResponse>(`/usage${suffix}`)
 }
 
 export async function getAnnouncementsRequest() {

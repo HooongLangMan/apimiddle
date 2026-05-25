@@ -103,6 +103,13 @@ export type UsageItem = {
   cacheCreationRatio?: number
 }
 
+export type UsageListResponse = {
+  items: UsageItem[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export type AnnouncementItem = {
   id: string
   title: string

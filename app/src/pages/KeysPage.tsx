@@ -150,6 +150,7 @@ export function KeysPage() {
       {editingKey ? (
         <EditKeyQuotaModal
           item={editingKey}
+          pricing={pricing}
           onClose={() => setEditingKey(null)}
           onSave={handleUpdateKey}
         />
