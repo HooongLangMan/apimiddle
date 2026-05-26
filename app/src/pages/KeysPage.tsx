@@ -120,7 +120,7 @@ export function KeysPage() {
     <div className="page">
       <PageHeader
         title="API Keys"
-        description="创建独立密钥、限制每把 Key 的额度，并在后续按需自行调整。"
+        description=""
       />
 
       {error ? <div className="alert error">{error}</div> : null}
@@ -129,9 +129,7 @@ export function KeysPage() {
         <div className="section-head">
           <h2>创建新 Key</h2>
         </div>
-        <p className="panel-description">
-          创建时可以直接为这把 Key 设定独立额度，后面也可以继续调整。
-        </p>
+
         <button className="primary-button" onClick={() => setShowCreateModal(true)}>
           <Plus size={16} />
           <span>创建密钥</span>

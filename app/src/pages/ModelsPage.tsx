@@ -456,7 +456,7 @@ export function ModelsPage() {
     <div className="page">
       <PageHeader
         title="模型广场"
-        description="这里直接读取 new-api 的实时定价与分组配置。你新加的 Gemini 模型、当前可用倍率和协议入口，都会在这里同步展示。"
+        description=""
       />
 
       <section className="stats-grid compact">
@@ -493,9 +493,6 @@ export function ModelsPage() {
         <div className="section-head">
           <div>
             <h2>当前倍率分组</h2>
-            <p className="panel-description">
-              已对齐你线上真实配置。这里不再写死旧文案，删掉某个上游分组后，页面会按后台实时结果更新。
-            </p>
           </div>
         </div>
 
@@ -529,7 +526,6 @@ export function ModelsPage() {
         <div className="section-head">
           <div>
             <h2>筛选模型</h2>
-            <p className="panel-description">先按家族、供应商或关键词筛选，再点进详情看具体倍率和变体。</p>
           </div>
         </div>
 
@@ -581,9 +577,6 @@ export function ModelsPage() {
         <div className="section-head">
           <div>
             <h2>模型列表</h2>
-            <p className="panel-description">
-              卡片先只保留核心信息，点“查看详情”后再展开介绍、倍率价格和模型变体。
-            </p>
           </div>
         </div>
 
@@ -661,7 +654,6 @@ export function ModelsPage() {
           <div className="section-head">
             <div>
               <h2>支持协议</h2>
-              <p className="panel-description">这里展示的是当前账号实际可走的上游协议入口。</p>
             </div>
           </div>
           <div className="protocol-simple-grid">
@@ -680,7 +672,6 @@ export function ModelsPage() {
           <div className="section-head">
             <div>
               <h2>全部倍率分组</h2>
-              <p className="panel-description">这个区块继续直接读取后台返回，不再依赖前端手工维护。</p>
             </div>
           </div>
           <div className="pricing-group-list">

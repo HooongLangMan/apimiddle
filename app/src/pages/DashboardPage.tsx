@@ -204,7 +204,7 @@ export function DashboardPage() {
     <div className="page dashboard-page">
       <PageHeader
         title={`晚上好，${user?.name ?? '用户'}`}
-        description="这里集中展示余额、今日概览和调用趋势，先把账号状态看清楚。"
+        description=""
       />
 
       <section className="stats-grid">
@@ -309,7 +309,6 @@ export function DashboardPage() {
           <div className="section-head">
             <div>
               <h2>账户概览</h2>
-              <p className="panel-description">把账户状态、配额消耗和基础入口集中到一起。</p>
             </div>
           </div>
 
@@ -336,7 +335,6 @@ export function DashboardPage() {
             <div className="dashboard-progress-track">
               <div className="dashboard-progress-bar" style={{ width: `${usageRate}%` }} />
             </div>
-            <p className="panel-description">按当前余额和累计消耗估算你的用量节奏。</p>
           </div>
         </article>
 
@@ -344,7 +342,6 @@ export function DashboardPage() {
           <div className="section-head">
             <div>
               <h2>常用入口</h2>
-              <p className="panel-description">把最常用的操作放在这里，少跳页面。</p>
             </div>
           </div>
 
@@ -389,7 +386,6 @@ export function DashboardPage() {
         <div className="section-head">
           <div>
             <h2>调用折线趋势</h2>
-            <p className="panel-description">把请求次数和消耗拉成折线，变化会比单个条目更容易看清楚。</p>
           </div>
         </div>
 

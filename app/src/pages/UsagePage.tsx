@@ -123,7 +123,7 @@ export function UsagePage() {
     <div className="page dashboard-page">
       <PageHeader
         title="使用日志"
-        description="尽量按 new-api 的方式展示：更多字段、可展开详情、明确分页和总条数，让用户知道记录没有被藏。"
+        description=""
       />
 
       {error ? <div className="alert error">{error}</div> : null}
@@ -132,7 +132,6 @@ export function UsagePage() {
         <div className="section-head">
           <div>
             <h2>日志筛选</h2>
-            <p className="panel-description">把筛选做细一点，用户才能更放心地核对每一笔调用记录。</p>
           </div>
         </div>
 
@@ -274,7 +273,6 @@ export function UsagePage() {
         <div className="section-head">
           <div>
             <h2>日志列表</h2>
-            <p className="panel-description">点整行就能展开，不用再去找眼睛按钮。底部也会明确告诉用户总共有多少条。</p>
           </div>
         </div>
 
