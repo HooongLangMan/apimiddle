@@ -14,23 +14,23 @@ import { publicApiBase, publicApiOrigin } from '../config'
 
 const highlights = [
   {
-    title: '兼容常见接入方式',
-    description: '支持 OpenAI 风格调用，便于接入脚本、应用和各类桌面客户端。',
+    title: '兼容主流 SDK',
+    description: '支持 OpenAI 兼容调用，便于接入脚本、应用和各类桌面客户端。',
     icon: Code2,
   },
   {
-    title: 'Key 管理更清楚',
-    description: '登录后即可创建、查看和停用 API Key，方便按设备、项目或成员拆分使用。',
+    title: 'Key 管理清晰',
+    description: '支持创建、查看和调整 API Key，适合按设备、项目或成员拆分使用。',
     icon: KeyRound,
   },
   {
-    title: '统一对外入口',
-    description: '通过固定 HTTPS 地址提供服务，减少多套地址和多处配置带来的维护成本。',
+    title: '用量记录透明',
+    description: '余额、日志、分组和近期调用都能在控制台里直接查看，减少对账成本。',
     icon: Shield,
   },
   {
-    title: '接入门槛更低',
-    description: '准备好 Base URL 和 API Key 后即可开始联调，不需要额外折腾复杂配置。',
+    title: '接入更直接',
+    description: '准备好 Base URL 和 API Key 后即可开始联调，不需要额外维护多套入口。',
     icon: Zap,
   },
 ]
@@ -64,12 +64,12 @@ const featuredModels = [
     pricing: '均衡选择',
   },
   {
-    name: 'Claude Sonnet 4.6',
-    id: 'claude-sonnet-4-6',
-    badge: '性价比优先',
+    name: 'Gemini 2.5 Flash',
+    id: 'gemini-2.5-flash',
+    badge: '多模态优先',
     badgeTone: 'green',
-    description: '更适合日常文本处理、批量任务和更关注成本控制的调用场景。',
-    features: ['文本处理', '成本友好', '日常任务', '批量调用'],
+    description: '适合高频生产调用，兼顾响应速度、成本控制和多模态能力，适合作为轻量主力模型。',
+    features: ['多模态', '响应更快', '成本友好', '高频调用'],
     pricing: '效率优先',
   },
 ]
@@ -136,7 +136,7 @@ const faqs = [
   },
   {
     q: '可用模型从哪里看？',
-    a: '登录后的控制台概览页会根据当前账号的实际权限，实时展示可访问的模型列表。',
+    a: '登录后进入“模型广场”即可查看当前账号可用的模型、分组和价格信息。',
   },
   {
     q: '余额和消耗怎么看？',
@@ -168,7 +168,7 @@ export function LandingPage() {
           <div className="brand-mark">688</div>
           <div>
             <div className="brand-title">688 API Portal</div>
-            <div className="brand-subtitle">稳定的 AI 模型接入入口</div>
+            <div className="brand-subtitle">统一 AI API 接入平台</div>
           </div>
         </div>
 
@@ -201,11 +201,11 @@ export function LandingPage() {
         <div className="hero-minimal-copy">
           <div className="hero-badge">
             <Sparkles size={14} />
-            面向开发者与团队的统一接入入口
+            统一接入与用量管理
           </div>
-          <h1>更快接入主流 AI 模型，少花时间折腾兼容和管理。</h1>
+          <h1>主流 AI 模型统一接入，密钥、模型和用量都在一个控制台里。</h1>
           <p>
-            统一的 API 入口、清晰的 Key 管理、用量可视化和常用调用示例，适合个人开发者、团队和内部服务使用。
+            一个稳定入口，覆盖模型接入、API Key 管理、调用记录和接入示例，适合个人开发者、小团队和内部业务系统。
           </p>
 
           <div className="hero-stats">
@@ -240,10 +240,10 @@ export function LandingPage() {
 
       <section id="highlights" className="landing-section">
         <div className="section-header">
-          <div className="section-kicker">为什么选择 688Token</div>
-          <h2 className="section-title">让接入、管理和查看都更省事</h2>
+          <div className="section-kicker">产品特点</div>
+          <h2 className="section-title">把接入、密钥和用量放到一个控制台里</h2>
           <p className="section-description">
-            不堆太多概念，先把真正影响接入效率和日常使用体验的几个点做好。
+            减少分散配置、来回切换和人工核对，让日常接入和维护更直接。
           </p>
         </div>
 
@@ -263,9 +263,9 @@ export function LandingPage() {
       <section id="featured-models" className="landing-section">
         <div className="section-header">
           <div className="section-kicker">主推模型</div>
-          <h2 className="section-title">模型介绍</h2>
+          <h2 className="section-title">主力模型推荐</h2>
           <p className="section-description">
-            这里整理了当前主推模型的特点、适用场景和大致定位，方便你快速选择。
+            按能力定位和使用场景做了简要整理，方便你快速选型。
           </p>
         </div>
 
