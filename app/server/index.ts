@@ -161,6 +161,23 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
+function parseLogOther(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+
+  try {
+    const parsed = JSON.parse(String(value ?? '{}'))
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>
+    }
+  } catch {
+    // Ignore malformed payloads and normalize to empty object.
+  }
+
+  return {}
+}
+
 const router = express.Router()
 
 router.get('/auth/config', (_req, res) => {
@@ -564,13 +581,7 @@ router.get('/usage', (req, res) => {
 
       let items = listItems<Record<string, unknown>>(data)
         .map((item) => ({
-          other: (() => {
-            try {
-              return JSON.parse(String(item.other ?? '{}'))
-            } catch {
-              return {}
-            }
-          })(),
+          other: parseLogOther(item.other),
           id: String(item.id),
           time: formatTime(item.created_at),
           model: String(item.model_name ?? ''),
